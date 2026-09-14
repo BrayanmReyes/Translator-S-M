@@ -149,14 +149,13 @@ export default function MangaTranslator({
             </h2>
 
             <div className="aspect-video bg-gray-900 rounded-lg overflow-hidden border border-gray-700 relative mb-4">
-              {isCapturing ? (
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  className="w-full h-full object-contain"
-                />
-              ) : (
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                className={`w-full h-full object-contain ${isCapturing ? 'block' : 'hidden'}`}
+              />
+              {!isCapturing && (
                 <div className="absolute inset-0 flex items-center justify-center text-gray-500">
                   La vista previa aparecerá aquí
                 </div>
