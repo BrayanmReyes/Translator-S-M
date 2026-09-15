@@ -7,6 +7,7 @@ import { extractTextFromImage } from '@/lib/ocr';
 export default function Home() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [translatedText, setTranslatedText] = useState('');
+  const [detectedLanguage, setDetectedLanguage] = useState('');
 
   const handleProcessImage = async (imageDataUrl: string) => {
     setIsProcessing(true);
@@ -38,6 +39,7 @@ export default function Home() {
       const data = await response.json();
 
       setTranslatedText(`Texto original:\n${extractedText}\n\nTraducción al español:\n${data.translatedText}`);
+      setDetectedLanguage(data.detectedLanguage);
       setIsProcessing(false);
 
     } catch (error) {
@@ -63,6 +65,7 @@ export default function Home() {
           onProcessImage={handleProcessImage}
           isProcessing={isProcessing}
           translatedText={translatedText}
+          detectedLanguage={detectedLanguage}
         />
       </div>
     </main>

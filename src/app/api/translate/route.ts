@@ -11,18 +11,14 @@ export async function POST(req: Request) {
       );
     }
 
-    // We use a free translation API for this demo (MyMemory Translation API)
-    // It allows 500 requests/day for free without an API key.
-    // For production, consider using Google Cloud Translation, DeepL, or an AI Model (OpenAI/Gemini).
-
     // Clean text: replace newlines with spaces for better translation context
-    const cleanText = text.replace(/\\n/g, ' ').trim();
+    const cleanText = text.replace(/\n/g, ' ').trim();
 
-    const response = await fetch(
-      `https://api.mymemory.translated.net/get?q=${encodeURIComponent(
-        cleanText
-      )}&langpair=autodetect|es`
-    );
+    // We use Lingva API, a free privacy-oriented proxy for Google Translate
+    // It doesn't require an API key and supports auto-detection.
+    const url = `https://lingva.ml/api/v1/auto/es/${encodeURIComponent(cleanText)}`;
+
+    const response = await fetch(url);
 
     if (!response.ok) {
         throw new Error('Translation API responded with an error.');
@@ -30,10 +26,13 @@ export async function POST(req: Request) {
 
     const data = await response.json();
 
-    // MyMemory returns translated text in responseData.translatedText
-    const translatedText = data.responseData?.translatedText || 'No se pudo traducir.';
+    const translatedText = data.translation || 'No se pudo traducir.';
+    const detectedLanguage = data.info?.detectedSource || 'Desconocido';
 
-    return NextResponse.json({ translatedText });
+    return NextResponse.json({
+      translatedText,
+      detectedLanguage
+    });
   } catch (error) {
     console.error('Translation error:', error);
     return NextResponse.json(

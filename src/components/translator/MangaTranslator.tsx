@@ -1,19 +1,21 @@
 'use client';
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Camera, Upload, Play, Square, Loader2 } from 'lucide-react';
+import { Camera, Upload, Play, Square, Loader2, RotateCw } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
 
 interface MangaTranslatorProps {
   onProcessImage: (imageDataUrl: string) => Promise<void>;
   isProcessing: boolean;
   translatedText: string;
+  detectedLanguage?: string;
 }
 
 export default function MangaTranslator({
   onProcessImage,
   isProcessing,
   translatedText,
+  detectedLanguage,
 }: MangaTranslatorProps) {
   const [isCapturing, setIsCapturing] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -21,6 +23,7 @@ export default function MangaTranslator({
   const [stream, setStream] = useState<MediaStream | null>(null);
   const captureIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [isAutoTranslating, setIsAutoTranslating] = useState(false);
+  const [rotation, setRotation] = useState(0);
 
   // File Upload Handling
   const onDrop = useCallback(
@@ -70,6 +73,10 @@ export default function MangaTranslator({
       console.error('Error sharing screen:', err);
       alert('Error sharing screen. Please grant permissions.');
     }
+  };
+
+  const rotateVideo = () => {
+    setRotation((prev) => (prev + 90) % 360);
   };
 
   const stopCapture = () => {
@@ -125,11 +132,36 @@ export default function MangaTranslator({
 
       if (video.videoWidth === 0 || video.videoHeight === 0) return;
 
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
+      // Configurar dimensiones del canvas según la rotación
+      if (rotation % 180 === 90) {
+        canvas.width = video.videoHeight;
+        canvas.height = video.videoWidth;
+      } else {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+      }
+
       const ctx = canvas.getContext('2d');
       if (ctx) {
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        ctx.save();
+
+        // Mover el punto de origen al centro del canvas
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+
+        // Rotar el contexto
+        ctx.rotate((rotation * Math.PI) / 180);
+
+        // Dibujar el video centrado (compensando el punto de origen)
+        ctx.drawImage(
+          video,
+          -video.videoWidth / 2,
+          -video.videoHeight / 2,
+          video.videoWidth,
+          video.videoHeight
+        );
+
+        ctx.restore();
+
         const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
         onProcessImage(dataUrl);
       }
@@ -148,12 +180,13 @@ export default function MangaTranslator({
               Captura en Tiempo Real
             </h2>
 
-            <div className="aspect-video bg-gray-900 rounded-lg overflow-hidden border border-gray-700 relative mb-4">
+            <div className="aspect-video bg-gray-900 rounded-lg overflow-hidden border border-gray-700 relative mb-4 flex items-center justify-center">
               <video
                 ref={videoRef}
                 autoPlay
                 playsInline
-                className={`w-full h-full object-contain ${isCapturing ? 'block' : 'hidden'}`}
+                className={`max-w-full max-h-full object-contain transition-transform duration-300 ${isCapturing ? 'block' : 'hidden'}`}
+                style={{ transform: `rotate(${rotation}deg)` }}
               />
               {!isCapturing && (
                 <div className="absolute inset-0 flex items-center justify-center text-gray-500">
@@ -176,6 +209,13 @@ export default function MangaTranslator({
                 </button>
               ) : (
                 <>
+                  <button
+                    onClick={rotateVideo}
+                    className="flex-none flex items-center justify-center gap-2 bg-gray-700 hover:bg-gray-600 text-white py-3 px-4 rounded-xl font-medium transition-colors"
+                    title="Rotar pantalla 90°"
+                  >
+                    <RotateCw className="w-5 h-5" />
+                  </button>
                   <button
                     onClick={stopCapture}
                     className="flex-none flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white py-3 px-4 rounded-xl font-medium transition-colors"
@@ -240,7 +280,14 @@ export default function MangaTranslator({
 
         {/* Right Column: Output */}
         <div className="bg-gray-800 p-6 rounded-2xl shadow-xl border border-gray-700 flex flex-col h-full min-h-[400px]">
-          <h2 className="text-xl font-bold text-white mb-4">Traducción</h2>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold text-white">Traducción</h2>
+            {detectedLanguage && detectedLanguage !== 'Desconocido' && (
+              <span className="text-xs font-medium px-2.5 py-1 bg-blue-900/50 text-blue-300 rounded-full border border-blue-800">
+                Detectado: {detectedLanguage.toUpperCase()}
+              </span>
+            )}
+          </div>
 
           <div className="flex-1 bg-gray-900 rounded-xl p-4 overflow-y-auto border border-gray-700 relative">
              {isProcessing && (
